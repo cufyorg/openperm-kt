@@ -98,6 +98,30 @@ fun <T> Permission(
 }
 
 /**
+ * Create a permission that returns the result of checking a permit from the given [roles].
+ *
+ * @since 1.1.0
+ */
+@JvmName("fromRole")
+fun <T> Permission(
+    vararg roles: Role
+) = Permission<T>(roles.asList())
+
+/**
+ * Create a permission that returns the result of checking a permit from the given [roles].
+ *
+ * @since 1.1.0
+ */
+@JvmName("fromRole")
+fun <T> Permission(
+    roles: List<Role>
+) = object : Permission<T> {
+    override suspend fun invoke(privilege: Privilege, target: T): List<Approval> {
+        return roles.flatMap { privilege(it) }
+    }
+}
+
+/**
  * Create a permission that returns the result of checking the given [permits].
  *
  * @author LSafer
