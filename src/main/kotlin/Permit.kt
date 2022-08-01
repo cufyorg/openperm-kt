@@ -43,7 +43,7 @@ interface Permit<T> {
  * @since 1.0.0
  */
 fun <T> Permit(
-    builder: suspend Permit<T>.(T) -> Permit<T>
+    builder: suspend Permit<T>.(T) -> Permit<in T>
 ) = object : Permit<T> {
     override suspend fun invoke(target: T): List<Role> {
         return builder(target)(target)
@@ -100,7 +100,7 @@ fun <T> Permit(
  */
 @JvmName("combine")
 fun <T> Permit(
-    vararg permits: Permit<T>
+    vararg permits: Permit<in T>
 ) = Permit(permits.asList())
 
 /**
@@ -111,7 +111,7 @@ fun <T> Permit(
  */
 @JvmName("combine")
 fun <T> Permit(
-    permits: List<Permit<T>>
+    permits: List<Permit<in T>>
 ) = object : Permit<T> {
     override suspend fun invoke(target: T): List<Role> {
         return permits.flatMap { it(target) }

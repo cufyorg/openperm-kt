@@ -46,7 +46,7 @@ interface Permission<T> {
  * @since 1.0.0
  */
 fun <T> Permission(
-    builder: suspend Permission<T>.(Privilege, T) -> Permission<T>
+    builder: suspend Permission<T>.(Privilege, T) -> Permission<in T>
 ) = object : Permission<T> {
     override suspend fun invoke(privilege: Privilege, target: T): List<Approval> {
         return builder(privilege, target)(privilege, target)
@@ -129,7 +129,7 @@ fun <T> Permission(
  */
 @JvmName("fromPermit")
 fun <T> Permission(
-    vararg permits: Permit<T>
+    vararg permits: Permit<in T>
 ) = Permission(permits.asList())
 
 /**
@@ -140,7 +140,7 @@ fun <T> Permission(
  */
 @JvmName("fromPermit")
 fun <T> Permission(
-    permits: List<Permit<T>>
+    permits: List<Permit<in T>>
 ) = object : Permission<T> {
     override suspend fun invoke(privilege: Privilege, target: T): List<Approval> {
         return permits.flatMap { it(target).flatMap { privilege(it) } }
@@ -155,7 +155,7 @@ fun <T> Permission(
  */
 @JvmName("combine")
 fun <T> Permission(
-    vararg permissions: Permission<T>
+    vararg permissions: Permission<in T>
 ) = Permission(permissions.asList())
 
 /**
@@ -166,7 +166,7 @@ fun <T> Permission(
  */
 @JvmName("combine")
 fun <T> Permission(
-    permissions: List<Permission<T>>
+    permissions: List<Permission<in T>>
 ) = object : Permission<T> {
     override suspend fun invoke(privilege: Privilege, target: T): List<Approval> {
         return permissions.flatMap { it(privilege, target) }
@@ -188,8 +188,8 @@ fun <T> Permission(
  * @author LSafer
  * @since 1.0.0
  */
-class EveryPermission<T>(private val permissions: List<Permission<T>>) : Permission<T> {
-    constructor(vararg permissions: Permission<T>) : this(permissions.asList())
+class EveryPermission<T>(private val permissions: List<Permission<in T>>) : Permission<T> {
+    constructor(vararg permissions: Permission<in T>) : this(permissions.asList())
 
     override suspend fun invoke(privilege: Privilege, target: T): List<Approval> {
         if (permissions.isEmpty())
@@ -226,8 +226,8 @@ class EveryPermission<T>(private val permissions: List<Permission<T>>) : Permiss
  * @author LSafer
  * @since 1.0.0
  */
-class SomePermission<T>(private val permissions: List<Permission<T>>) : Permission<T> {
-    constructor(vararg permissions: Permission<T>) : this(permissions.asList())
+class SomePermission<T>(private val permissions: List<Permission<in T>>) : Permission<T> {
+    constructor(vararg permissions: Permission<in T>) : this(permissions.asList())
 
     override suspend fun invoke(privilege: Privilege, target: T): List<Approval> {
         if (permissions.isEmpty())
