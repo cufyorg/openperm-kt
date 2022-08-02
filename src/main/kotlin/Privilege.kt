@@ -35,6 +35,8 @@ interface Privilege {
     companion object
 }
 
+// Builder
+
 /**
  * Return a privilege that invokes the given [builder]
  * and return the result of invoking its results.
@@ -49,6 +51,8 @@ fun Privilege(
         return builder(role)(role)
     }
 }
+
+// Constructor
 
 /**
  * Create a privilege that returns a successful
@@ -119,6 +123,8 @@ fun Privilege(
         return privileges.flatMap { it(role) }
     }
 }
+
+// Implementation
 
 /**
  * A privilege that caches resolved roles.

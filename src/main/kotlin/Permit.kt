@@ -35,6 +35,8 @@ interface Permit<T> {
     companion object
 }
 
+// Builder
+
 /**
  * Return a permit that invokes the given [builder]
  * and return the result of invoking its results.
@@ -49,6 +51,8 @@ fun <T> Permit(
         return builder(target)(target)
     }
 }
+
+// Constructor
 
 /**
  * Create a permit that returns a role with the

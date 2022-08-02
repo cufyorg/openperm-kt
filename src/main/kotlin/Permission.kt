@@ -38,6 +38,8 @@ interface Permission<T> {
     companion object
 }
 
+// Builder
+
 /**
  * Return a permission that invokes the given [builder]
  * and return the result of invoking its results.
@@ -52,6 +54,8 @@ fun <T> Permission(
         return builder(privilege, target)(privilege, target)
     }
 }
+
+// Constructor
 
 /**
  * Create a permission that returns a successful
