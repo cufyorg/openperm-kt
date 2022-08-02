@@ -173,6 +173,26 @@ fun <T> Permission(
     }
 }
 
+// Util
+
+/**
+ * Create a new permission that returns the result of invoking the given
+ * permission with the target being the result of invoking the given mapper
+ * with the target given to it.
+ *
+ * @since 1.0.0
+ */
+fun <T, U> Permission.Companion.map(
+    permission: Permission<U>,
+    mapper: suspend (T) -> U
+) = object : Permission<T> {
+    override suspend fun invoke(privilege: Privilege, target: T): List<Approval> {
+        return permission(privilege, mapper(target))
+    }
+}
+
+// Implementation
+
 /**
  * A permission that checks a list of permissions.
  *

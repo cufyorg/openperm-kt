@@ -150,32 +150,6 @@ fun <T> Permission.Companion.some(
 ) = SomePermission(*permissions)
 
 /**
- * Create a new permission that returns the result of invoking the given
- * permission with the target being the result of invoking the given mapper
- * with the target given to it.
- *
- * @since 1.0.0
- */
-// <editor-fold desc="@Deprecated">
-@Deprecated(
-    "openperm original function",
-    ReplaceWith(
-        "Permission { privilege, target -> Permission(permission(privilege, mapper(target))) }",
-        "org.cufy.openperm.Permission"
-    ),
-    DeprecationLevel.WARNING
-)
-// </editor-fold>
-fun <T, U> Permission.Companion.map(
-    permission: Permission<U>,
-    mapper: suspend (T) -> U
-) = object : Permission<T> {
-    override suspend fun invoke(privilege: Privilege, target: T): List<Approval> {
-        return permission(privilege, mapper(target))
-    }
-}
-
-/**
  * Create a permission that returns the result of checking the given permit.
  *
  * @since 1.0.0
@@ -407,28 +381,3 @@ suspend fun <T> isPermitted(
     privilege: Privilege,
     target: T
 ) = testPermit(permit, privilege, target)
-
-/**
- * Create a permit that returns the result of invoking the given permit with
- * the target being the result of invoking the given mapper with the target given to it.
- *
- * @since 1.0.0
- */
-// <editor-fold desc="@Deprecated">
-@Deprecated(
-    "openperm original function",
-    ReplaceWith(
-        "Permit { Permit(permit(mapper(it))) }",
-        "org.cufy.openperm.Permit"
-    ),
-    DeprecationLevel.WARNING
-)
-// </editor-fold>
-fun <T, U> Permit.Companion.map(
-    permit: Permit<U>,
-    mapper: suspend (T) -> U
-) = object : Permit<T> {
-    override suspend fun invoke(target: T): List<Role> {
-        return permit(mapper(target))
-    }
-}

@@ -117,3 +117,20 @@ fun <T> Permit(
         return permits.flatMap { it(target) }
     }
 }
+
+// Util
+
+/**
+ * Create a permit that returns the result of invoking the given permit with
+ * the target being the result of invoking the given mapper with the target given to it.
+ *
+ * @since 1.0.0
+ */
+fun <T, U> Permit.Companion.map(
+    permit: Permit<U>,
+    mapper: suspend (T) -> U
+) = object : Permit<T> {
+    override suspend fun invoke(target: T): List<Role> {
+        return permit(mapper(target))
+    }
+}
