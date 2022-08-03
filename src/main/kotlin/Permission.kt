@@ -327,12 +327,17 @@ suspend fun <T> Permission<T>.check(
 ): Approval {
     val approvals = this(privilege, target)
 
-    if (approvals.isEmpty())
+    if (approvals.isEmpty()) {
         return Approval(false, Denial.NoResults)
+    }
 
-    for (approval in approvals)
-        if (!approval.value)
-            return approval
+    val failure = approvals.indexOfFirst { !it.value }
+
+    if (failure >= 0) {
+        return approvals[failure].suppress(
+            approvals.filterIndexed { i, _ -> i != failure }
+        )
+    }
 
     return approvals[0]
 }
@@ -361,22 +366,31 @@ class EveryPermission<T>(private val permissions: List<Permission<in T>>) : Perm
         if (permissions.isEmpty())
             return listOf(Approval(true, Denial.NoChecklist))
 
-        var firstSuccess: Approval? = null
+        val successes = mutableListOf<Approval>()
 
         for (permission in permissions) {
             val approvals = permission(privilege, target)
 
-            if (approvals.isEmpty())
-                return listOf(Approval(false, Denial.NoResults))
+            if (approvals.isEmpty()) {
+                return listOf(Approval(false, Denial.NoResults, successes))
+            }
 
-            for (approval in approvals)
-                if (!approval.value)
-                    return listOf(approval)
+            val failure = approvals.indexOfFirst { !it.value }
 
-            firstSuccess = firstSuccess ?: approvals.firstOrNull()
+            if (failure >= 0) {
+                return listOf(approvals[failure].suppress(
+                    successes + approvals.filterIndexed { i, _ -> i != failure }
+                ))
+            }
+
+            successes += approvals
         }
 
-        return listOf(firstSuccess ?: Approval(true, Denial.NoResults))
+        if (successes.isEmpty()) {
+            return listOf(Approval(true, Denial.NoResults))
+        }
+
+        return listOf(successes[0].suppress(successes.drop(1)))
     }
 }
 
@@ -399,18 +413,26 @@ class SomePermission<T>(private val permissions: List<Permission<in T>>) : Permi
         if (permissions.isEmpty())
             return listOf(Approval(false, Denial.NoChecklist))
 
-        var firstFailure: Approval? = null
+        val failures = mutableListOf<Approval>()
 
         for (permission in permissions) {
             val approvals = permission(privilege, target)
 
-            for (approval in approvals)
-                if (approval.value)
-                    return listOf(approval)
+            val success = approvals.indexOfFirst { it.value }
 
-            firstFailure = firstFailure ?: approvals.firstOrNull()
+            if (success >= 0) {
+                return listOf(approvals[success].suppress(
+                    failures + approvals.filterIndexed { i, _ -> i != success }
+                ))
+            }
+
+            failures += approvals
         }
 
-        return listOf(firstFailure ?: Approval(false, Denial.NoResults))
+        if (failures.isEmpty()) {
+            return listOf(Approval(false, Denial.NoResults))
+        }
+
+        return listOf(failures[0].suppress(failures.drop(1)))
     }
 }

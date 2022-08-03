@@ -233,12 +233,17 @@ suspend fun Privilege.check(
 ): Approval {
     val approvals = this(role)
 
-    if (approvals.isEmpty())
+    if (approvals.isEmpty()) {
         return Approval(false, role.error)
+    }
 
-    for (approval in approvals)
-        if (!approval.value)
-            return approval
+    val failure = approvals.indexOfFirst { !it.value }
+
+    if (failure >= 0) {
+        return approvals[failure].suppress(
+            approvals.filterIndexed { i, _ -> i != failure }
+        )
+    }
 
     return approvals[0]
 }
@@ -278,19 +283,27 @@ class SomePrivilege(private val privileges: List<Privilege>) : Privilege {
         if (privileges.isEmpty())
             return listOf(Approval(false, role.error))
 
-        var firstFailure: Approval? = null
+        val failures = mutableListOf<Approval>()
 
         for (privilege in privileges) {
             val approvals = privilege(role)
 
-            for (approval in approvals)
-                if (approval.value)
-                    return listOf(approval)
+            val success = approvals.indexOfFirst { it.value }
 
-            firstFailure = firstFailure ?: approvals.firstOrNull()
+            if (success >= 0) {
+                return listOf(approvals[success].suppress(
+                    failures + approvals.filterIndexed { i, _ -> i != success }
+                ))
+            }
+
+            failures += approvals
         }
 
-        return listOf(firstFailure ?: Approval(false, role.error))
+        if (failures.isEmpty()) {
+            return listOf(Approval(false, role.error))
+        }
+
+        return listOf(failures[0].suppress(failures.drop(1)))
     }
 }
 
@@ -316,21 +329,30 @@ class EveryPrivilege(private val privileges: List<Privilege>) : Privilege {
         if (privileges.isEmpty())
             return listOf(Approval(true, role.error))
 
-        var firstSuccess: Approval? = null
+        val successes = mutableListOf<Approval>()
 
         for (privilege in privileges) {
             val approvals = privilege(role)
 
-            if (privileges.isEmpty())
-                return listOf(Approval(false, role.error))
+            if (approvals.isEmpty()) {
+                return listOf(Approval(false, role.error, successes))
+            }
 
-            for (approval in approvals)
-                if (!approval.value)
-                    return listOf(approval)
+            val failure = approvals.indexOfFirst { !it.value }
 
-            firstSuccess = firstSuccess ?: approvals.firstOrNull()
+            if (failure >= 0) {
+                return listOf(approvals[failure].suppress(
+                    successes + approvals.filterIndexed { i, _ -> i != failure }
+                ))
+            }
+
+            successes += approvals
         }
 
-        return listOf(firstSuccess ?: Approval(true, role.error))
+        if (successes.isEmpty()) {
+            return listOf(Approval(true, role.error))
+        }
+
+        return listOf(successes[0].suppress(successes.drop(1)))
     }
 }

@@ -273,16 +273,29 @@ suspend fun <T> Permit<T>.check(
     if (roles.isEmpty())
         return Approval(false, Denial.NoChecklist)
 
+    val successes = mutableListOf<Approval>()
+
     for (role in roles) {
         val approvals = privilege(role)
 
-        if (approvals.isEmpty())
-            return Approval(false, role.error)
+        if (approvals.isEmpty()) {
+            return Approval(false, role.error, successes)
+        }
 
-        for (approval in approvals)
-            if (!approval.value)
-                return approval
+        val failure = approvals.indexOfFirst { !it.value }
+
+        if (failure >= 0) {
+            return approvals[failure].suppress(
+                successes + approvals.filterIndexed { i, _ -> i != failure }
+            )
+        }
+
+        successes += approvals
     }
 
-    return Approval(false, roles[0].error)
+    if (successes.isEmpty()) {
+        return Approval(true, roles[0].error)
+    }
+
+    return successes[0].suppress(successes.drop(1))
 }

@@ -36,6 +36,37 @@ open class Approval(
      * @since 1.0.0
      */
     val error: Throwable? = null,
+    /**
+     * Suppressed approvals while creating this approval.
+     *
+     * @since 1.3.0
+     */
+    val suppressed: List<Approval> = emptyList()
 ) {
+    /**
+     * Add the given [approvals] to the [suppressed]
+     * approvals list of this approval in a new
+     * approval instance.
+     *
+     * @since 1.3.0
+     */
+    open fun suppress(vararg approvals: Approval): Approval {
+        return suppress(approvals.asList())
+    }
+
+    /**
+     * Add the given [approvals] to the [suppressed]
+     * approvals list of this approval in a new
+     * approval instance.
+     *
+     * @since 1.3.0
+     */
+    open fun suppress(approvals: List<Approval>): Approval {
+        return when {
+            approvals.isEmpty() -> this
+            else -> Approval(value, error, suppressed + approvals)
+        }
+    }
+
     companion object
 }
