@@ -58,6 +58,17 @@ fun <T> Permission(
 // Constructor
 
 /**
+ * Create a permission that returns no approvals.
+ *
+ * @since 1.3.0
+ */
+fun <T> Permission() = object : Permission<T> {
+    override suspend fun invoke(privilege: Privilege, target: T): List<Approval> {
+        return emptyList()
+    }
+}
+
+/**
  * Create a permission that returns a successful
  * approval when [value] is true and a failure
  * approval otherwise.
@@ -152,6 +163,37 @@ fun <T> Permission(
 }
 
 /**
+ * Create a new permission that returns the result of invoking the given
+ * [permissions] with the target being the result of invoking the given
+ * [mapper] with the target given to it.
+ *
+ * @since 1.3.0
+ */
+@JvmName("map")
+fun <T, U> Permission(
+    permission: Permission<U>,
+    vararg permissions: Permission<U>,
+    mapper: suspend (T) -> U
+) = Permission(listOf(permission, *permissions), mapper)
+
+/**
+ * Create a new permission that returns the result of invoking the given
+ * [permissions] with the target being the result of invoking the given
+ * [mapper] with the target given to it.
+ *
+ * @since 1.3.0
+ */
+@JvmName("map")
+fun <T, U> Permission(
+    permissions: List<Permission<U>>,
+    mapper: suspend (T) -> U
+) = object : Permission<T> {
+    override suspend fun invoke(privilege: Privilege, target: T): List<Approval> {
+        return permissions.flatMap { it(privilege, mapper(target)) }
+    }
+}
+
+/**
  * Return a permission that returns the approvals from invoking the given [permissions].
  *
  * @author LSafer
@@ -177,22 +219,122 @@ fun <T> Permission(
     }
 }
 
-// Util
+// Extension
 
 /**
- * Create a new permission that returns the result of invoking the given
- * permission with the target being the result of invoking the given mapper
- * with the target given to it.
+ * Check the given permission and throw the error if it fails.
  *
- * @since 1.0.0
+ * @param permission the permission to be checked.
+ * @param privilege the privilege.
+ * @param target the target to check the permission for.
+ * @author LSafer
+ * @since 1.3.0
  */
-fun <T, U> Permission.Companion.map(
-    permission: Permission<U>,
-    mapper: suspend (T) -> U
-) = object : Permission<T> {
-    override suspend fun invoke(privilege: Privilege, target: T): List<Approval> {
-        return permission(privilege, mapper(target))
-    }
+@JvmName("requirePermission")
+suspend fun <T> require(
+    permission: Permission<T>,
+    privilege: Privilege,
+    target: T
+) = permission.require(privilege, target)
+
+/**
+ * Check this permission and throw the error if it fails.
+ *
+ * @receiver the permission to be checked.
+ * @param privilege the privilege.
+ * @param target the target to check the permission for.
+ * @author LSafer
+ * @since 1.3.0
+ */
+suspend fun <T> Permission<T>.require(
+    privilege: Privilege,
+    target: T
+): T {
+    val approval = check(privilege, target)
+
+    if (!approval.value)
+        throw approval.error ?: Denial.Unspecified
+
+    return target
+}
+
+/**
+ * Check the given permission.
+ *
+ * @param permission the permission to be checked.
+ * @param privilege the privilege.
+ * @param target the target to check the permit for.
+ * @return true, if the privilege is permissioned the given permission for the given target.
+ * @author LSafer
+ * @since 1.3.0
+ */
+@JvmName("testPermission")
+suspend fun <T> test(
+    permission: Permission<T>,
+    privilege: Privilege,
+    target: T
+) = permission.test(privilege, target)
+
+/**
+ * Check this permission.
+ *
+ * @receiver the permission to be checked.
+ * @param privilege the privilege.
+ * @param target the target to check the permit for.
+ * @return true, if the privilege is permissioned the given permission for the given target.
+ * @author LSafer
+ * @since 1.3.0
+ */
+suspend fun <T> Permission<T>.test(
+    privilege: Privilege,
+    target: T
+): Boolean {
+    val approval = check(privilege, target)
+
+    return approval.value
+}
+
+/**
+ * Check the given permission.
+ *
+ * @param permission the permission to be checked.
+ * @param privilege the privilege.
+ * @param target the target to check the permission for.
+ * @return an approval object.
+ * @author LSafer
+ * @since 1.3.0
+ */
+@JvmName("checkPermission")
+suspend fun <T> check(
+    permission: Permission<T>,
+    privilege: Privilege,
+    target: T
+) = permission.check(privilege, target)
+
+/**
+ * Check this permission.
+ *
+ * @receiver the permission to be checked.
+ * @param privilege the privilege.
+ * @param target the target to check the permission for.
+ * @return an approval object.
+ * @author LSafer
+ * @since 1.3.0
+ */
+suspend fun <T> Permission<T>.check(
+    privilege: Privilege,
+    target: T
+): Approval {
+    val approvals = this(privilege, target)
+
+    if (approvals.isEmpty())
+        return Approval(false, Denial.NoResults)
+
+    for (approval in approvals)
+        if (!approval.value)
+            return approval
+
+    return approvals[0]
 }
 
 // Implementation

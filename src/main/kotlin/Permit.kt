@@ -55,6 +55,17 @@ fun <T> Permit(
 // Constructor
 
 /**
+ * Create a permit that returns no roles.
+ *
+ * @since 1.3.0
+ */
+fun <T> Permit() = object : Permit<T> {
+    override suspend fun invoke(target: T): List<Role> {
+        return emptyList()
+    }
+}
+
+/**
  * Create a permit that returns a role with the
  * given [error].
  *
@@ -97,6 +108,35 @@ fun <T> Permit(
 }
 
 /**
+ * Create a permit that returns the result of invoking the given [permits] with
+ * the target being the result of invoking the given [mapper] with the target given to it.
+ *
+ * @since 1.0.0
+ */
+@JvmName("map")
+fun <T, U> Permit(
+    permit: Permit<U>,
+    vararg permits: Permit<U>,
+    mapper: suspend (T) -> U
+) = Permit(listOf(permit, *permits), mapper)
+
+/**
+ * Create a permit that returns the result of invoking the given [permits] with
+ * the target being the result of invoking the given [mapper] with the target given to it.
+ *
+ * @since 1.0.0
+ */
+@JvmName("map")
+fun <T, U> Permit(
+    permits: List<Permit<U>>,
+    mapper: suspend (T) -> U
+) = object : Permit<T> {
+    override suspend fun invoke(target: T): List<Role> {
+        return permits.flatMap { it(mapper(target)) }
+    }
+}
+
+/**
  * Return a permit that returns the roles from invoking the given [permits].
  *
  * @author LSafer
@@ -122,19 +162,127 @@ fun <T> Permit(
     }
 }
 
-// Util
+// Extension
 
 /**
- * Create a permit that returns the result of invoking the given permit with
- * the target being the result of invoking the given mapper with the target given to it.
+ * Check the given permit and throw the error if it fails.
  *
- * @since 1.0.0
+ * @param permit the permit to be checked.
+ * @param privilege the privilege.
+ * @param target the target to check the permit for.
+ * @author LSafer
+ * @since 1.3.0
  */
-fun <T, U> Permit.Companion.map(
-    permit: Permit<U>,
-    mapper: suspend (T) -> U
-) = object : Permit<T> {
-    override suspend fun invoke(target: T): List<Role> {
-        return permit(mapper(target))
+@JvmName("requirePermit")
+suspend fun <T> require(
+    permit: Permit<T>,
+    privilege: Privilege,
+    target: T
+) = permit.require(privilege, target)
+
+/**
+ * Check this permit and throw the error if it fails.
+ *
+ * @receiver the permit to be checked.
+ * @param privilege the privilege.
+ * @param target the target to check the permit for.
+ * @author LSafer
+ * @since 1.3.0
+ */
+suspend fun <T> Permit<T>.require(
+    privilege: Privilege,
+    target: T
+): T {
+    val approval = check(privilege, target)
+
+    if (!approval.value)
+        throw approval.error ?: Denial.Unspecified
+
+    return target
+}
+
+/**
+ * Check the given permit.
+ *
+ * @param permit the permit to be checked.
+ * @param privilege the privilege.
+ * @param target the target to check the permit for.
+ * @return true, if the privilege is permitted the given permit for the given target.
+ * @author LSafer
+ * @since 1.3.0
+ */
+@JvmName("testPermit")
+suspend fun <T> test(
+    permit: Permit<T>,
+    privilege: Privilege,
+    target: T
+) = permit.test(privilege, target)
+
+/**
+ * Check this permit.
+ *
+ * @receiver the permit to be checked.
+ * @param privilege the privilege.
+ * @param target the target to check the permit for.
+ * @return true, if the privilege is permitted the given permit for the given target.
+ * @author LSafer
+ * @since 1.3.0
+ */
+suspend fun <T> Permit<T>.test(
+    privilege: Privilege,
+    target: T
+): Boolean {
+    val approval = check(privilege, target)
+
+    return approval.value
+}
+
+/**
+ * Check the given permit.
+ *
+ * @param permit the permit to be checked.
+ * @param privilege the privilege.
+ * @param target the target to check the permit for.
+ * @return an approval object.
+ * @author LSafer
+ * @since 1.3.0
+ */
+@JvmName("checkPermit")
+suspend fun <T> check(
+    permit: Permit<T>,
+    privilege: Privilege,
+    target: T
+) = permit.check(privilege, target)
+
+/**
+ * Check this permit.
+ *
+ * @receiver the permit to be checked.
+ * @param privilege the privilege.
+ * @param target the target to check the permit for.
+ * @return an approval object.
+ * @author LSafer
+ * @since 1.3.0
+ */
+suspend fun <T> Permit<T>.check(
+    privilege: Privilege,
+    target: T
+): Approval {
+    val roles = this(target)
+
+    if (roles.isEmpty())
+        return Approval(false, Denial.NoChecklist)
+
+    for (role in roles) {
+        val approvals = privilege(role)
+
+        if (approvals.isEmpty())
+            return Approval(false, role.error)
+
+        for (approval in approvals)
+            if (!approval.value)
+                return approval
     }
+
+    return Approval(false, roles[0].error)
 }

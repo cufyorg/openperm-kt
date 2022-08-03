@@ -94,7 +94,84 @@ suspend fun <T> isPermissioned(
     permission: Permission<T>,
     privilege: Privilege,
     target: T
-) = testPermission(permission, privilege, target)
+) = test(permission, privilege, target)
+
+/**
+ * Check the given permission and throw the error if it fails.
+ *
+ * @param permission the permission to be checked.
+ * @param privilege the privilege.
+ * @param target the target to check the permission for.
+ * @author LSafer
+ * @since 1.0.0
+ */
+// <editor-fold desc="@Deprecated">
+@Deprecated(
+    "openperm original function",
+    ReplaceWith(
+        "require(permission, privilege, target)",
+        "org.cufy.openperm.require"
+    ),
+    DeprecationLevel.WARNING
+)
+// </editor-fold>
+suspend fun <T> requirePermission(
+    permission: Permission<T>,
+    privilege: Privilege,
+    target: T
+) = require(permission, privilege, target)
+
+/**
+ * Check the given permission.
+ *
+ * @param permission the permission to be checked.
+ * @param privilege the privilege.
+ * @param target the target to check the permit for.
+ * @return true, if the privilege is permissioned the given permission for the given target.
+ * @author LSafer
+ * @since 1.0.0
+ */
+// <editor-fold desc="@Deprecated">
+@Deprecated(
+    "openperm original function",
+    ReplaceWith(
+        "test(permission, privilege, target)",
+        "org.cufy.openperm.test"
+    ),
+    DeprecationLevel.WARNING
+)
+// </editor-fold>
+suspend fun <T> testPermission(
+    permission: Permission<T>,
+    privilege: Privilege,
+    target: T
+) = test(permission, privilege, target)
+
+/**
+ * Check the given permission.
+ *
+ * @param permission the permission to be checked.
+ * @param privilege the privilege.
+ * @param target the target to check the permission for.
+ * @return an approval object.
+ * @author LSafer
+ * @since 1.0.0
+ */
+// <editor-fold desc="@Deprecated">
+@Deprecated(
+    "openperm original function",
+    ReplaceWith(
+        "check(permission, privilege, target)",
+        "org.cufy.openperm.check"
+    ),
+    DeprecationLevel.WARNING
+)
+// </editor-fold>
+suspend fun <T> checkPermission(
+    permission: Permission<T>,
+    privilege: Privilege,
+    target: T
+) = check(permission, privilege, target)
 
 /**
  * Return a permission that checks the given `permissions`.
@@ -166,8 +243,34 @@ fun <T> Permission.Companion.some(
 // </editor-fold>
 fun <T> Permission.Companion.create(
     permit: Permit<T>
-) = Permission<T> { privilege, target ->
-    Permission(checkPermit(permit, privilege, target))
+) = Permission { privilege, target ->
+    Permission(check(permit, privilege, target))
+}
+
+/**
+ * Create a new permission that returns the result of invoking the given
+ * permission with the target being the result of invoking the given mapper
+ * with the target given to it.
+ *
+ * @since 1.0.0
+ */
+// <editor-fold desc="@Deprecated">
+@Deprecated(
+    "openperm original function",
+    ReplaceWith(
+        "Permission(permission, mapper = mapper)",
+        "org.cufy.openperm.Permission"
+    ),
+    DeprecationLevel.WARNING
+)
+// </editor-fold>
+fun <T, U> Permission.Companion.map(
+    permission: Permission<U>,
+    mapper: suspend (T) -> U
+) = object : Permission<T> {
+    override suspend fun invoke(privilege: Privilege, target: T): List<Approval> {
+        return permission(privilege, mapper(target))
+    }
 }
 
 /* ================================================================ */
@@ -186,14 +289,88 @@ fun <T> Permission.Companion.create(
 @Deprecated(
     "openperm original function",
     ReplaceWith(
-        "testPrivilege(privilege, role)",
-        "org.cufy.openperm.testPrivilege"
+        "test(privilege, role)",
+        "org.cufy.openperm.test"
     ),
     DeprecationLevel.WARNING
 )
 // </editor-fold>
-suspend fun isPrivileged(privilege: Privilege, role: Role) =
-    testPrivilege(privilege, role)
+suspend fun isPrivileged(
+    privilege: Privilege,
+    role: Role
+) = test(privilege, role)
+
+/**
+ * Check the given privilege and throw the error if it fails.
+ *
+ * @param privilege the privilege to be checked.
+ * @param role the role to check the privilege for.
+ * @return the role.
+ * @author LSafer
+ * @since 1.0.0
+ */
+// <editor-fold desc="@Deprecated">
+@Deprecated(
+    "openperm original function",
+    ReplaceWith(
+        "require(privilege, role)",
+        "org.cufy.openperm.require"
+    ),
+    DeprecationLevel.WARNING
+)
+// </editor-fold>
+suspend fun requirePrivilege(
+    privilege: Privilege,
+    role: Role
+) = require(privilege, role)
+
+/**
+ * Check the given privilege.
+ *
+ * @param privilege the privilege to be checked.
+ * @param role the role to check the privilege for.
+ * @return true, if the privilege has approval for the given role.
+ * @author LSafer
+ * @since 1.0.0
+ */
+// <editor-fold desc="@Deprecated">
+@Deprecated(
+    "openperm original function",
+    ReplaceWith(
+        "test(privilege, role)",
+        "org.cufy.openperm.test"
+    ),
+    DeprecationLevel.WARNING
+)
+// </editor-fold>
+suspend fun testPrivilege(
+    privilege: Privilege,
+    role: Role
+) = test(privilege, role)
+
+/**
+ * Check the given privilege.
+ *
+ * @param privilege the privilege to be checked.
+ * @param role the role to check the privilege for.
+ * @return an approval object.
+ * @author LSafer
+ * @since 1.0.0
+ */
+// <editor-fold desc="@Deprecated">
+@Deprecated(
+    "openperm original function",
+    ReplaceWith(
+        "check(privilege, role)",
+        "org.cufy.openperm.check"
+    ),
+    DeprecationLevel.WARNING
+)
+// </editor-fold>
+suspend fun checkPrivilege(
+    privilege: Privilege,
+    role: Role
+) = check(privilege, role)
 
 /**
  * Return a privilege that always succeed.
@@ -370,8 +547,8 @@ fun Privilege.Companion.withSelf(
 @Deprecated(
     "openperm original function",
     ReplaceWith(
-        "testPermit(permit, privilege, target)",
-        "org.cufy.openperm.testPermit"
+        "test(permit, privilege, target)",
+        "org.cufy.openperm.test"
     ),
     DeprecationLevel.WARNING
 )
@@ -380,4 +557,106 @@ suspend fun <T> isPermitted(
     permit: Permit<T>,
     privilege: Privilege,
     target: T
-) = testPermit(permit, privilege, target)
+) = test(permit, privilege, target)
+
+/**
+ * Check the given permit and throw the error if it fails.
+ *
+ * @param permit the permit to be checked.
+ * @param privilege the privilege.
+ * @param target the target to check the permit for.
+ * @author LSafer
+ * @since 1.0.0
+ */
+// <editor-fold desc="@Deprecated">
+@Deprecated(
+    "openperm original function",
+    ReplaceWith(
+        "require(permit, privilege, target)",
+        "org.cufy.openperm.require"
+    ),
+    DeprecationLevel.WARNING
+)
+// </editor-fold>
+suspend fun <T> requirePermit(
+    permit: Permit<T>,
+    privilege: Privilege,
+    target: T
+) = require(permit, privilege, target)
+
+/**
+ * Check the given permit.
+ *
+ * @param permit the permit to be checked.
+ * @param privilege the privilege.
+ * @param target the target to check the permit for.
+ * @return true, if the privilege is permitted the given permit for the given target.
+ * @author LSafer
+ * @since 1.0.0
+ */
+// <editor-fold desc="@Deprecated">
+@Deprecated(
+    "openperm original function",
+    ReplaceWith(
+        "test(permit, privilege, target)",
+        "org.cufy.openperm.test"
+    ),
+    DeprecationLevel.WARNING
+)
+// </editor-fold>
+suspend fun <T> testPermit(
+    permit: Permit<T>,
+    privilege: Privilege,
+    target: T
+) = test(permit, privilege, target)
+
+/**
+ * Check the given permit.
+ *
+ * @param permit the permit to be checked.
+ * @param privilege the privilege.
+ * @param target the target to check the permit for.
+ * @return an approval object.
+ * @author LSafer
+ * @since 1.0.0
+ */
+// <editor-fold desc="@Deprecated">
+@Deprecated(
+    "openperm original function",
+    ReplaceWith(
+        "check(permit, privilege, target)",
+        "org.cufy.openperm.check"
+    ),
+    DeprecationLevel.WARNING
+)
+// </editor-fold>
+suspend fun <T> checkPermit(
+    permit: Permit<T>,
+    privilege: Privilege,
+    target: T
+) = check(permit, privilege, target)
+
+/**
+ * Create a permit that returns the result of invoking the given permit with
+ * the target being the result of invoking the given mapper with the target given to it.
+ *
+ * @since 1.0.0
+ */
+// <editor-fold desc="@Deprecated">
+@Deprecated(
+    "openperm original function",
+    ReplaceWith(
+        "Permit(permit, mapper = mapper)",
+        "org.cufy.openperm.Permit"
+    ),
+    DeprecationLevel.WARNING
+)
+// </editor-fold>
+fun <T, U> Permit.Companion.map(
+    permit: Permit<U>,
+    mapper: suspend (T) -> U
+) = object : Permit<T> {
+    override suspend fun invoke(target: T): List<Role> {
+        return permit(mapper(target))
+    }
+}

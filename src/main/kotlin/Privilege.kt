@@ -55,6 +55,17 @@ fun Privilege(
 // Constructor
 
 /**
+ * Create a privilege that returns no approvals.
+ *
+ * @since 1.3.0
+ */
+fun Privilege() = object : Privilege {
+    override suspend fun invoke(role: Role): List<Approval> {
+        return emptyList()
+    }
+}
+
+/**
  * Create a privilege that returns a successful
  * approval when [value] is true and a failure
  * approval otherwise.
@@ -122,6 +133,114 @@ fun Privilege(
     override suspend fun invoke(role: Role): List<Approval> {
         return privileges.flatMap { it(role) }
     }
+}
+
+// Extension
+
+/**
+ * Check the given privilege and throw the error if it fails.
+ *
+ * @param privilege the privilege to be checked.
+ * @param role the role to check the privilege for.
+ * @return the role.
+ * @author LSafer
+ * @since 1.0.0
+ */
+@JvmName("requirePrivilege")
+suspend fun require(
+    privilege: Privilege,
+    role: Role
+) = privilege.require(role)
+
+/**
+ * Check this privilege and throw the error if it fails.
+ *
+ * @receiver the privilege to be checked.
+ * @param role the role to check the privilege for.
+ * @return the role.
+ * @author LSafer
+ * @since 1.3.0
+ */
+suspend fun Privilege.require(
+    role: Role
+): Role {
+    val approval = check(role)
+
+    if (!approval.value)
+        throw approval.error ?: Denial.Unspecified
+
+    return role
+}
+
+/**
+ * Check the given privilege.
+ *
+ * @param privilege the privilege to be checked.
+ * @param role the role to check the privilege for.
+ * @return true, if the privilege has approval for the given role.
+ * @author LSafer
+ * @since 1.0.0
+ */
+@JvmName("testPrivilege")
+suspend fun test(
+    privilege: Privilege,
+    role: Role
+) = privilege.test(role)
+
+/**
+ * Check this privilege.
+ *
+ * @receiver the privilege to be checked.
+ * @param role the role to check the privilege for.
+ * @return true, if the privilege has approval for the given role.
+ * @author LSafer
+ * @since 1.3.0
+ */
+suspend fun Privilege.test(
+    role: Role
+): Boolean {
+    val approval = check(role)
+
+    return approval.value
+}
+
+/**
+ * Check the given privilege.
+ *
+ * @param privilege the privilege to be checked.
+ * @param role the role to check the privilege for.
+ * @return an approval object.
+ * @author LSafer
+ * @since 1.0.0
+ */
+@JvmName("checkPrivilege")
+suspend fun check(
+    privilege: Privilege,
+    role: Role
+) = privilege.check(role)
+
+/**
+ * Check this privilege.
+ *
+ * @receiver the privilege to be checked.
+ * @param role the role to check the privilege for.
+ * @return an approval object.
+ * @author LSafer
+ * @since 1.3.0
+ */
+suspend fun Privilege.check(
+    role: Role
+): Approval {
+    val approvals = this(role)
+
+    if (approvals.isEmpty())
+        return Approval(false, role.error)
+
+    for (approval in approvals)
+        if (!approval.value)
+            return approval
+
+    return approvals[0]
 }
 
 // Implementation
