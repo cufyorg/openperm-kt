@@ -294,12 +294,13 @@ fun <T> PermissionsBuilder<T>.combine(
 @JvmName("appendPermissions")
 @OverloadResolutionByLambdaReturnType
 fun <T> PermissionsBuilder<T>.append(
-    block: () -> Permissions<T>
+    block: () -> Permissions<in T>
 ) {
-    val permissions = block()
+    @Suppress("UNCHECKED_CAST")
+    val permissions = block() as Permissions<T>
 
     factory { access ->
-        permissions(access, this)
+        Permission(permissions(access, this))
     }
 }
 

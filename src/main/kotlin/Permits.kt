@@ -235,9 +235,10 @@ fun <T> PermitsBuilder<T>.filter(
 @JvmName("appendPermits")
 @OverloadResolutionByLambdaReturnType
 fun <T> PermitsBuilder<T>.append(
-    block: () -> Permits<T>
+    block: () -> Permits<in T>
 ) {
-    val permits = block()
+    @Suppress("UNCHECKED_CAST")
+    val permits = block() as Permits<T>
 
     factory { access ->
         permits(access, this)
